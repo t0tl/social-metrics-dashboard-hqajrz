@@ -1,3 +1,4 @@
+
 /**
  * Authentication Context Template
  *
@@ -43,15 +44,17 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 /**
  * Opens OAuth popup for web-based social authentication
- * Returns a promise that resolves with the token
+ * Returns a promise that resolves with the user data
  */
-function openOAuthPopup(provider: string): Promise<string> {
+function openOAuthPopup(provider: string): Promise<User> {
   return new Promise((resolve, reject) => {
     const popupUrl = `${window.location.origin}/auth-popup?provider=${provider}`;
     const width = 500;
     const height = 600;
     const left = window.screenX + (window.outerWidth - width) / 2;
     const top = window.screenY + (window.outerHeight - height) / 2;
+
+    console.log("Opening OAuth popup for provider:", provider);
 
     const popup = window.open(
       popupUrl,
@@ -60,19 +63,29 @@ function openOAuthPopup(provider: string): Promise<string> {
     );
 
     if (!popup) {
-      reject(new Error("Failed to open popup. Please allow popups."));
+      reject(new Error("Failed to open popup. Please allow popups for this site."));
       return;
     }
 
     const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type === "oauth-success" && event.data?.token) {
+      // Verify the message is from our popup
+      if (event.origin !== window.location.origin) {
+        console.log("Ignoring message from different origin:", event.origin);
+        return;
+      }
+
+      console.log("Received message from popup:", event.data);
+
+      if (event.data?.type === "oauth-success" && event.data?.user) {
         window.removeEventListener("message", handleMessage);
         clearInterval(checkClosed);
-        resolve(event.data.token);
+        popup.close();
+        resolve(event.data.user);
       } else if (event.data?.type === "oauth-error") {
         window.removeEventListener("message", handleMessage);
         clearInterval(checkClosed);
-        reject(new Error(event.data.error || "OAuth failed"));
+        popup.close();
+        reject(new Error(event.data.error || "OAuth authentication failed"));
       }
     };
 
@@ -83,7 +96,7 @@ function openOAuthPopup(provider: string): Promise<string> {
       if (popup.closed) {
         clearInterval(checkClosed);
         window.removeEventListener("message", handleMessage);
-        reject(new Error("Authentication cancelled"));
+        reject(new Error("Authentication cancelled - popup was closed"));
       }
     }, 500);
   });
@@ -102,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true);
       const session = await authClient.getSession();
+      console.log("Fetched session:", session);
       if (session?.user) {
         setUser(session.user as User);
       } else {
@@ -131,7 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email,
         password,
         name,
-        callbackURL: "/profile", // TODO: Update redirect URL
+        callbackURL: "/profile",
       });
       await fetchUser();
     } catch (error) {
@@ -142,16 +156,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGoogle = async () => {
     try {
+      console.log("Starting Google sign in, platform:", Platform.OS);
+      
       if (Platform.OS === "web") {
         // Web: Use popup flow to avoid cross-origin issues
-        const token = await openOAuthPopup("google");
-        storeWebBearerToken(token);
+        console.log("Using popup flow for Google sign in");
+        const userData = await openOAuthPopup("google");
+        console.log("OAuth popup completed with user:", userData);
+        
+        // Fetch the updated session
         await fetchUser();
       } else {
         // Native: Use deep linking (handled by Better Auth)
+        console.log("Using deep linking for Google sign in");
         await authClient.signIn.social({
           provider: "google",
-          callbackURL: "/profile", // TODO: Update redirect URL
+          callbackURL: "/profile",
         });
         await fetchUser();
       }
@@ -163,16 +183,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithApple = async () => {
     try {
+      console.log("Starting Apple sign in, platform:", Platform.OS);
+      
       if (Platform.OS === "web") {
         // Web: Use popup flow
-        const token = await openOAuthPopup("apple");
-        storeWebBearerToken(token);
+        console.log("Using popup flow for Apple sign in");
+        const userData = await openOAuthPopup("apple");
+        console.log("OAuth popup completed with user:", userData);
+        
+        // Fetch the updated session
         await fetchUser();
       } else {
         // Native: Use deep linking
+        console.log("Using deep linking for Apple sign in");
         await authClient.signIn.social({
           provider: "apple",
-          callbackURL: "/profile", // TODO: Update redirect URL
+          callbackURL: "/profile",
         });
         await fetchUser();
       }
@@ -184,16 +210,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGitHub = async () => {
     try {
+      console.log("Starting GitHub sign in, platform:", Platform.OS);
+      
       if (Platform.OS === "web") {
         // Web: Use popup flow
-        const token = await openOAuthPopup("github");
-        storeWebBearerToken(token);
+        console.log("Using popup flow for GitHub sign in");
+        const userData = await openOAuthPopup("github");
+        console.log("OAuth popup completed with user:", userData);
+        
+        // Fetch the updated session
         await fetchUser();
       } else {
         // Native: Use deep linking
+        console.log("Using deep linking for GitHub sign in");
         await authClient.signIn.social({
           provider: "github",
-          callbackURL: "/profile", // TODO: Update redirect URL
+          callbackURL: "/profile",
         });
         await fetchUser();
       }

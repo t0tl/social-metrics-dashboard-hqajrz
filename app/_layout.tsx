@@ -78,27 +78,23 @@ export default function RootLayout() {
       notification: "rgb(255, 69, 58)", // System Red (Dark Mode)
     },
   };
+
   return (
     <>
       <StatusBar style="auto" animated />
-        <ThemeProvider
-          value={colorScheme === "dark" ? CustomDarkTheme : CustomDefaultTheme}
-        >
-          <AuthProvider>
-            <WidgetProvider>
-              <GestureHandlerRootView>
+      <ThemeProvider
+        value={colorScheme === "dark" ? CustomDarkTheme : CustomDefaultTheme}
+      >
+        <AuthProvider>
+          <WidgetProvider>
+            <GestureHandlerRootView style={{ flex: 1 }}>
               <Stack>
+                {/* Auth Screens */}
+                <Stack.Screen name="sign-in" options={{ headerShown: false }} />
+                <Stack.Screen name="sign-up" options={{ headerShown: false }} />
+
                 {/* Main app with tabs */}
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-
-                {/* Auth popup for OAuth */}
-                <Stack.Screen
-                  name="auth-popup"
-                  options={{
-                    headerShown: false,
-                    presentation: "transparentModal",
-                  }}
-                />
 
                 {/* Modal Demo Screens */}
                 <Stack.Screen
@@ -127,10 +123,10 @@ export default function RootLayout() {
                 />
               </Stack>
               <SystemBars style={"auto"} />
-              </GestureHandlerRootView>
-            </WidgetProvider>
-          </AuthProvider>
-        </ThemeProvider>
+            </GestureHandlerRootView>
+          </WidgetProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </>
   );
 }

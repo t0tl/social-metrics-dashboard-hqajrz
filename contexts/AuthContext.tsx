@@ -1,3 +1,4 @@
+
 /**
  * Authentication Context Template
  *
@@ -43,9 +44,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 /**
  * Opens OAuth popup for web-based social authentication
- * Returns a promise that resolves with the token
+ * Returns a promise that resolves with the user data
  */
-function openOAuthPopup(provider: string): Promise<string> {
+function openOAuthPopup(provider: string): Promise<User> {
   return new Promise((resolve, reject) => {
     const popupUrl = `${window.location.origin}/auth-popup?provider=${provider}`;
     const width = 500;
@@ -65,10 +66,10 @@ function openOAuthPopup(provider: string): Promise<string> {
     }
 
     const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type === "oauth-success" && event.data?.token) {
+      if (event.data?.type === "oauth-success" && event.data?.user) {
         window.removeEventListener("message", handleMessage);
         clearInterval(checkClosed);
-        resolve(event.data.token);
+        resolve(event.data.user);
       } else if (event.data?.type === "oauth-error") {
         window.removeEventListener("message", handleMessage);
         clearInterval(checkClosed);
@@ -131,7 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email,
         password,
         name,
-        callbackURL: "/profile", // TODO: Update redirect URL
+        callbackURL: "/profile",
       });
       await fetchUser();
     } catch (error) {
@@ -144,14 +145,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       if (Platform.OS === "web") {
         // Web: Use popup flow to avoid cross-origin issues
-        const token = await openOAuthPopup("google");
-        storeWebBearerToken(token);
-        await fetchUser();
+        const userData = await openOAuthPopup("google");
+        setUser(userData);
       } else {
         // Native: Use deep linking (handled by Better Auth)
         await authClient.signIn.social({
           provider: "google",
-          callbackURL: "/profile", // TODO: Update redirect URL
+          callbackURL: "/profile",
         });
         await fetchUser();
       }
@@ -165,14 +165,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       if (Platform.OS === "web") {
         // Web: Use popup flow
-        const token = await openOAuthPopup("apple");
-        storeWebBearerToken(token);
-        await fetchUser();
+        const userData = await openOAuthPopup("apple");
+        setUser(userData);
       } else {
         // Native: Use deep linking
         await authClient.signIn.social({
           provider: "apple",
-          callbackURL: "/profile", // TODO: Update redirect URL
+          callbackURL: "/profile",
         });
         await fetchUser();
       }
@@ -186,14 +185,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       if (Platform.OS === "web") {
         // Web: Use popup flow
-        const token = await openOAuthPopup("github");
-        storeWebBearerToken(token);
-        await fetchUser();
+        const userData = await openOAuthPopup("github");
+        setUser(userData);
       } else {
         // Native: Use deep linking
         await authClient.signIn.social({
           provider: "github",
-          callbackURL: "/profile", // TODO: Update redirect URL
+          callbackURL: "/profile",
         });
         await fetchUser();
       }
